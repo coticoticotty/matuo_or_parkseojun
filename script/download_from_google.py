@@ -1,23 +1,29 @@
-import requests
-import time
+import os
+from pathlib import Path
 import random
-import string
 import re
+import requests
+import string
+import sys
+import time
+
 from selenium import webdriver
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import ElementClickInterceptedException
-from bs4 import BeautifulSoup
-import os
+import yaml
 
 
-def collect_images(search_word):
-    QUERY = search_word
-    LIMIT_DL_NUM = 300
+def collect_images():
+    script_dir = Path(__file__).resolve().parent
+    yaml_file_path = os.path.join(script_dir, 'scraping.yaml')
+    with open(yaml_file_path, 'r') as f:
+        data = yaml.safe_load(f)
+
+    QUERY = data['google']['search_word']
+    LIMIT_DL_NUM = data['google']['limit_dl_num']
+    DRIVER_PATH = data['google']['driver_path']
     RETRY_NUM = 3
-    DRIVER_PATH = "C:/Users/Kohei Okamoto/Desktop/study/chromedriver"
     TIMEOUT = 3
 
     # フルスクリーンにする
@@ -37,13 +43,17 @@ def collect_images(search_word):
     # タイムアウト設定
     driver.implicitly_wait(TIMEOUT)
 
+    # グーグルの画像検索を行う。
     driver.get(url)
 
+    # 表示されるサムネイル画像をすべて取得する
     thumbnail_elements = driver.find_elements(By.CLASS_NAME, 'Q4LuWd')
 
+    # 取得したサムネイル画像数を数える
     count = len(thumbnail_elements)
     print(count)
 
+    # 取得したい枚数以上になるまでスクロールする
     while count < LIMIT_DL_NUM:
         driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
         time.sleep(2)
@@ -57,11 +67,17 @@ def collect_images(search_word):
     HTTP_HEADERS = {'User-Agent': driver.execute_script('return navigator.userAgent;')}
     print(HTTP_HEADERS)
 
+    # 画像をダウンロードするためのURLを格納
     image_urls = []
 
+    # サムネイルをクリックしたときに表示される画像から、画像のURLを取得
+    # エラーの処理は苦し紛れ
+    # うまく取得できるまで、最大3回はトライする
     for index, thumbnail_element in enumerate(thumbnail_elements):
         is_clicked = False
+
         for i in range(RETRY_NUM):
+            # サムネイル画像をクリックする。場合によっては失敗するのでtry-exceptでエラー処理
             try:
                 if is_clicked == False:
                     thumbnail_element.click()
@@ -75,13 +91,12 @@ def collect_images(search_word):
                 break
 
             try:
-                # qdnLaf isv-id b0vFpe
+                # サムネイル画像をクリックしたときに表示される大きい画像のimgタグを取得し、画像のURLをsrcから取得
                 image_element = driver.find_element(By.CLASS_NAME, 'KAlRDb')
-                # click_element = driver.find_element(By.CLASS_NAME, 'v4dQwb')
-                # image_element = click_element.find_element(By.TAG_NAME, 'img')
                 image_url = image_element.get_attribute('src')
 
-                if re.match(r'data:image', image_url):  # サムネイル画像のURLのままだった場合
+                # サムネイル画像をクリックした直後は、画像のURLがサムネイルURLのまま。そのURLだった場合、再度画像URLの取得を行う。
+                if re.match(r'data:image', image_url):
                     print(f'URLが変わるまで待ちましょう。{i+1}回目')
                     time.sleep(2)
                     if i+1 == RETRY_NUM:
@@ -90,7 +105,6 @@ def collect_images(search_word):
                 else:
                     print(f'image_url: {image_url}')
                     extension = get_extension(image_url)
-                    print(image_url)
 
                     if extension:
                         image_urls.append(image_url)
@@ -116,7 +130,8 @@ def collect_images(search_word):
         time.sleep(1)
 
     # 出力フォルダの作成
-    save_dir = f'./{QUERY}'
+    project_dir = Path(__file__).resolve().parent.parent
+    save_dir = os.path.join(project_dir, 'data', QUERY)
     os.makedirs(save_dir, exist_ok=True)
 
     for image_url in image_urls:
@@ -165,4 +180,4 @@ def down_load_image(url, save_dir, loop, http_header):
     return result
 
 if __name__ == '__main__':
-    collect_images('パクソジュン')
+    collect_images()

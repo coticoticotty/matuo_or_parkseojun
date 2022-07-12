@@ -1,17 +1,25 @@
-# おそらくライブラリのバグによりハッシュタグ検索ができない。。。
+from pathlib import Path
+import sys
+import os
 import instaloader
+import yaml
 
 
 def main():
-    # login using the credentials
-    USER = '*************'
-    PASSWORD = '***********'
+    script_dir = Path(__file__).resolve().parent
+    yaml_file_path = os.path.join(script_dir, 'scraping.yaml')
+    with open(yaml_file_path, 'r') as f:
+        data = yaml.safe_load(f)
 
-    cls = GetImageFromInstagram(USER, PASSWORD)
-    cls.download_user_posts('matsuoshun', 300)
+    USER_ID = data['instagram']['my_account']['user_id']
+    PASSWORD = data['instagram']['my_account']['passward']
+    TARGET_ID = data['instagram']['scraping_target']['target_account_id']
+    HASHTAG = data['instagram']['scraping_target']['target_hashtag']
+    NUM_OF_PICTURE = data['instagram']['scraping_target']['num_of_picture']
 
-    # パク・ソジュンの画像を入手
-    cls.download_user_posts('parkseojun', 300)
+
+    cls = GetImageFromInstagram(USER_ID, PASSWORD)
+    cls.download_user_posts(TARGET_ID, NUM_OF_PICTURE)
 
 class GetImageFromInstagram():
     def __init__(self, my_user_name, password):

@@ -1,12 +1,17 @@
 import glob
 import os
 import sys
+from pathlib import Path
 
 def main(dir_name):
-    target_extension = [".jpg"]
+    target_extension = [".jpg", ".png", "jpeg"]
+
+    # ディレクトリへのパス
+    project_dir = Path(__file__).resolve().parent.parent
+    target_dir = os.path.join(project_dir, 'data', dir_name)
 
     # 指定したディレクトリのファイル
-    files = glob.glob(f"./{dir_name}/*")
+    files = glob.glob(f"{target_dir}/*")
 
     for index, file in enumerate(files):
         path, extension = os.path.splitext(file)
