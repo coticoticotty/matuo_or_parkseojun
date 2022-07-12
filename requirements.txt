@@ -4,6 +4,7 @@ torchvision
 numpy
 opencv-python
 PyYAML
+pillow
 selenium
 timm
 tqdm
