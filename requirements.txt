@@ -5,6 +5,5 @@ numpy
 opencv-python-headless
 PyYAML
 pillow
-selenium
 timm
 tqdm

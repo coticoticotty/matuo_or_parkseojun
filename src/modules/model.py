@@ -22,7 +22,7 @@ def predict(pil_image):
     image_gray = cv2.cvtColor(cv2_image, cv2.COLOR_BGR2GRAY)
 
     root_dir = Path(__file__).resolve().parent.parent.parent
-    face_cascade_path = os.path.join(root_dir, 'script', 'haarcascade_frontalface_alt.xml')
+    face_cascade_path = os.path.join(root_dir, 'script', 'cascade', 'haarcascade_frontalface_alt.xml')
     # 顔検出器の読み込み
     face_cascade = cv2.CascadeClassifier(face_cascade_path)
 
