@@ -1,11 +1,15 @@
 import torchvision.datasets
 import matplotlib.pyplot as plt
+from pathlib import Path
+import os
+import sys
 from tqdm import tqdm
 from PIL import Image
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.utils.data as data
+import torchvision.models as models
 from torchvision import transforms
 from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 import timm
@@ -19,8 +23,10 @@ def main():
     # std = (0.229, 0.224, 0.225)
     std = IMAGENET_DEFAULT_STD  # -> (0.229, 0.224, 0.225) 値は一緒だった。
 
-    train_image_dir = '../data/train'
-    val_image_dir = '../data/val'
+    project_folder = Path(__file__).resolve().parent.parent
+    data_folder = os.path.join(project_folder, 'data')
+    train_image_dir = os.path.join(data_folder, 'train')
+    val_image_dir = os.path.join(data_folder, 'val')
 
     data_transform = {
         'train': transforms.Compose([
@@ -56,24 +62,20 @@ def main():
     dataloaders_dict = {'train': train_dataLoader, 'val': val_dataLoader}
 
     # 学習済みのVision Transferモデルをロード
-    model = timm.create_model('vit_base_patch16_224', pretrained=True, num_classes=2)
+    model = models.vit_b_16(weights=models.ViT_B_16_Weights.DEFAULT)
 
     # 損失関数はクロスエントロピー
     loss_func = nn.CrossEntropyLoss()
 
-    # 最適化手法を設定
-    params_to_update = []
-    update_param_names = ['head.weight', 'head.bias']
+    # 全ての層のパラメータを訓練不可に
+    for param in model.parameters():
+        param.requires_grad = False
 
-    for name, param in model.named_parameters():
-        if name in update_param_names:
-            param.requires_grad = True
-            params_to_update.append(param)
-        else:
-            param.requires_grad = False
+    # 一部の層を入れ替え（デフォルトで訓練可能）
+    model.heads[0] = nn.Linear(768, 2)
 
     # 最適化アルゴリズム
-    optimizer = optim.SGD(params=params_to_update, lr=0.001, momentum=0.9)
+    optimizer = optim.SGD(params=model.parameters(), lr=0.001, momentum=0.9)
 
     num_epochs = 50
     train_model(model, dataloaders_dict, loss_func, optimizer, num_epochs=num_epochs)
